@@ -45,6 +45,7 @@ public class BezierCurveInspector : Editor
         }
 
         ShowDirections();
+        ShowNormals();
     }
 
     public override void OnInspectorGUI()
@@ -53,6 +54,22 @@ public class BezierCurveInspector : Editor
         if (selectedIndex >= 0 && selectedIndex < spline.ControlPointCount)
         {
             DrawSelectedPointInspector();
+        }
+
+        if(spline == null)
+        {
+            //not sure why happening yet
+            Debug.Log("ERROR: spline is null");
+            return;
+        }
+
+        EditorGUI.BeginChangeCheck();
+        bool loop = EditorGUILayout.Toggle("Loop", spline.Loop);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(spline, "Toggle Loop");
+            EditorUtility.SetDirty(spline);
+            spline.Loop = loop;
         }
 
         spline = target as BezierSpline;
@@ -78,12 +95,30 @@ public class BezierCurveInspector : Editor
         }
     }
 
+    private void ShowNormals()
+    {
+        Handles.color = Color.red;
+        Vector3 point = spline.GetPoint(0f);
+        Handles.DrawLine(point, point + spline.GetUnitNormal(0f) * directionScale);
+        int lineSteps = 100;//set to 100 for debugging
+
+        for (int i = 1; i <= lineSteps; i++)
+        {
+            point = spline.GetPoint(i / (float)lineSteps);
+            Handles.DrawLine(point, point + spline.GetUnitNormal(i / (float)lineSteps) * directionScale);
+        }
+    }
+
     private Vector3 ShowPoint(int index)
     {
         Vector3 point = handleTransform.TransformPoint(spline.GetControlPoint(index));
         Handles.color = modeColors[(int)spline.GetControlPointMode(index)];
 
         float size = HandleUtility.GetHandleSize(point);
+        if (index == 0)
+        {
+            size *= 2f;
+        }
 
         /*
          * The Button method both shows a button and returns whether it was clicked. So you typically 
